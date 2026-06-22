@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>POS Tags — NLP Visual Guide</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:        #F8F9FC;
+      --surface:   #FFFFFF;
+      --border:    #E2E6F0;
+      --text:      #1A1D2E;
+      --muted:     #6B7280;
+      --accent:    #4F46E5;
+      --accent2:   #0891B2;
+
+      /* Per-tag palette — deeper shades for light bg readability */
+      --nn:  #B45309; --nn-bg: rgba(180,83,9,.09);
+      --vb:  #047857; --vb-bg: rgba(4,120,87,.09);
+      --jj:  #4338CA; --jj-bg: rgba(67,56,202,.09);
+      --rb:  #BE185D; --rb-bg: rgba(190,24,93,.09);
+      --pr:  #0369A1; --pr-bg: rgba(3,105,161,.09);
+      --dt:  #6D28D9; --dt-bg: rgba(109,40,217,.09);
+      --in:  #C2410C; --in-bg: rgba(194,65,12,.09);
+      --cc:  #065F46; --cc-bg: rgba(6,95,70,.09);
+      --uh:  #9D174D; --uh-bg: rgba(157,23,77,.09);
+      --ex:  #92400E; --ex-bg: rgba(146,64,14,.09);
+      --to:  #155E75; --to-bg: rgba(21,94,117,.09);
+      --md:  #5B21B6; --md-bg: rgba(91,33,182,.09);
+      --wh:  #166534; --wh-bg: rgba(22,101,52,.09);
+      --cd:  #991B1B; --cd-bg: rgba(153,27,27,.09);
+      --rp:  #1E40AF; --rp-bg: rgba(30,64,175,.09);
+    }
+
+    *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ─── HERO ────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(79,70,229,.10) 0%, transparent 70%),
+                  radial-gradient(ellipse 50% 40% at 80% 80%, rgba(8,145,178,.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .floating-tags {
+      position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+    }
+    .ft {
+      position: absolute;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .75rem;
+      font-weight: 600;
+      padding: .25rem .55rem;
+      border-radius: 6px;
+      opacity: 0;
+      animation: floatUp 14s infinite ease-in-out;
+    }
+    @keyframes floatUp {
+      0%   { transform: translateY(100vh) rotate(-6deg); opacity: 0; }
+      10%  { opacity: .45; }
+      90%  { opacity: .25; }
+      100% { transform: translateY(-10vh) rotate(6deg); opacity: 0; }
+    }
+
+    .hero-eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .8rem;
+      letter-spacing: .15em;
+      color: var(--accent2);
+      text-transform: uppercase;
+      margin-bottom: 1.2rem;
+      opacity: 0;
+      animation: fadeUp .8s .2s forwards;
+    }
+    .hero h1 {
+      font-size: clamp(2.6rem, 7vw, 5.5rem);
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: -.03em;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp .9s .4s forwards;
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero p {
+      max-width: 560px;
+      color: var(--muted);
+      font-size: 1.1rem;
+      margin-bottom: 2.5rem;
+      opacity: 0;
+      animation: fadeUp .9s .6s forwards;
+    }
+    .hero-btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      padding: .8rem 2rem;
+      border-radius: 999px;
+      text-decoration: none;
+      font-size: 1rem;
+      opacity: 0;
+      animation: fadeUp .9s .8s forwards;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .hero-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(79,70,229,.3); }
+
+    @keyframes fadeUp {
+      from { opacity:0; transform: translateY(20px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+    /* ─── SENTENCE DEMO ───────────────────────────────── */
+    .demo-section {
+      padding: 5rem 1.5rem;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .75rem;
+      letter-spacing: .12em;
+      color: var(--accent2);
+      text-transform: uppercase;
+      margin-bottom: .8rem;
+    }
+    .section-title {
+      font-size: clamp(1.6rem, 4vw, 2.5rem);
+      font-weight: 700;
+      letter-spacing: -.025em;
+      margin-bottom: 1rem;
+    }
+    .section-sub { color: var(--muted); max-width: 540px; margin-bottom: 2.5rem; }
+
+    .sentence-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: .9rem;
+      align-items: flex-end;
+      box-shadow: 0 2px 16px rgba(0,0,0,.06);
+    }
+    .word-chip {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .35rem;
+      cursor: pointer;
+      transition: transform .18s;
+    }
+    .word-chip:hover { transform: translateY(-4px); }
+    .word-text {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .word-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .7rem;
+      font-weight: 600;
+      padding: .2rem .55rem;
+      border-radius: 6px;
+      letter-spacing: .05em;
+    }
+
+    /* ─── GRID ────────────────────────────────────────── */
+    .grid-section {
+      padding: 4rem 1.5rem 6rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .pos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .pos-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.6rem 1.5rem;
+      position: relative;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(24px);
+      transition: transform .22s, box-shadow .22s, border-color .22s;
+      box-shadow: 0 1px 6px rgba(0,0,0,.06);
+    }
+    .pos-card.visible { animation: cardIn .5s forwards; }
+    @keyframes cardIn {
+      to { opacity:1; transform: translateY(0); }
+    }
+    .pos-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,.10);
+    }
+    .pos-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity .25s;
+      border-radius: inherit;
+    }
+    .pos-card:hover::before { opacity: 1; }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      gap: .8rem;
+      margin-bottom: 1rem;
+    }
+    .tag-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .85rem;
+      font-weight: 700;
+      padding: .3rem .75rem;
+      border-radius: 8px;
+      letter-spacing: .06em;
+      flex-shrink: 0;
+    }
+    .tag-name {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .tag-full { font-size: .8rem; color: var(--muted); }
+
+    .tag-desc {
+      font-size: .92rem;
+      color: var(--muted);
+      margin-bottom: 1.2rem;
+      line-height: 1.55;
+    }
+
+    .examples-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .68rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: .6rem;
+    }
+
+    .examples-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .45rem;
+      margin-bottom: 1rem;
+    }
+    .ex-chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .8rem;
+      padding: .25rem .65rem;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: default;
+      transition: transform .15s;
+    }
+    .ex-chip:hover { transform: scale(1.07); }
+
+    .sentence-example {
+      font-size: .88rem;
+      color: var(--muted);
+      font-style: italic;
+      border-left: 3px solid;
+      padding-left: .75rem;
+      line-height: 1.6;
+    }
+    .sentence-example mark {
+      background: none;
+      font-weight: 700;
+      font-style: normal;
+    }
+
+    /* ─── FOOTER ──────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--muted);
+      font-size: .85rem;
+      border-top: 1px solid var(--border);
+    }
+    footer span { color: var(--accent2); }
+
+    /* ─── SCROLL INDICATOR ────────────────────────────── */
+    .scroll-cue {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: .4rem;
+      color: var(--muted); font-size: .75rem; letter-spacing: .1em;
+      animation: fadeUp 1s 1.2s both;
+    }
+    .scroll-arrow {
+      width: 20px; height: 20px;
+      border-right: 2px solid var(--muted);
+      border-bottom: 2px solid var(--muted);
+      transform: rotate(45deg);
+      animation: bounce 1.5s infinite;
+    }
+    @keyframes bounce {
+      0%,100% { transform: rotate(45deg) translateY(0); }
+      50% { transform: rotate(45deg) translateY(5px); }
+    }
+
+    /* ─── RESPONSIVE ──────────────────────────────────── */
+    @media (max-width: 600px) {
+      .sentence-box { gap: .6rem; }
+      .word-text { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════ HERO ═══════════ -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="floating-tags" id="floatingTags"></div>
+
+  <p class="hero-eyebrow">Natural Language Processing</p>
+  <h1>Parts of Speech<br><span>Tags</span> Explained</h1>
+  <p>A visual guide to POS tagging — the building block that lets machines understand grammar, meaning, and structure in human language.</p>
+  <a href="#guide" class="hero-btn">Explore All Tags ↓</a>
+
+  <div class="scroll-cue">
+    <span>SCROLL</span>
+    <div class="scroll-arrow"></div>
+  </div>
+</section>
+
+<!-- ═══════════ LIVE SENTENCE ═══════════ -->
+<section class="demo-section" id="guide">
+  <p class="section-label">Interactive Demo</p>
+  <h2 class="section-title">See POS Tagging in Action</h2>
+  <p class="section-sub">Hover any word to highlight its tag category. Every word in a sentence belongs to exactly one part of speech.</p>
+
+  <div class="sentence-box" id="sentenceBox"></div>
+</section>
+
+<!-- ═══════════ FULL GRID ═══════════ -->
+<section class="grid-section">
+  <p class="section-label">Complete Reference</p>
+  <h2 class="section-title">All POS Tags</h2>
+  <p class="section-sub" style="margin-bottom:2.5rem">Every major Penn Treebank POS tag — definition, examples, and a tagged sentence.</p>
+
+  <div class="pos-grid" id="posGrid"></div>
+</section>
+
+<footer>
+  <p>Built for NLP learners &nbsp;·&nbsp; POS Tags Reference &nbsp;·&nbsp; <span>Penn Treebank Tagset</span></p>
+</footer>
+
+<script>
+/* ─────────────────────────────────────────────
+   DATA
+───────────────────────────────────────────── */
+const TAGS = [
+  {
+    code: "NN", name: "Noun", full: "Singular or Mass Noun",
+    color: "var(--nn)", bg: "var(--nn-bg)",
+    desc: "A noun names a person, place, thing, concept, or idea. Singular count nouns and uncountable (mass) nouns both use NN.",
+    examples: ["dog", "city", "music", "freedom", "car", "water"],
+    sentence: "The <mark>dog</mark> chased the <mark>ball</mark> across the <mark>garden</mark>."
+  },
+  {
+    code: "NNS", name: "Noun (Plural)", full: "Plural Noun",
+    color: "var(--nn)", bg: "var(--nn-bg)",
+    desc: "The plural form of a common noun. Typically formed by adding -s or -es, or through irregular forms.",
+    examples: ["dogs", "cities", "children", "mice", "books"],
+    sentence: "The <mark>children</mark> played with their <mark>toys</mark> in the park."
+  },
+  {
+    code: "NNP", name: "Proper Noun", full: "Singular Proper Noun",
+    color: "var(--nn)", bg: "var(--nn-bg)",
+    desc: "A proper noun is the specific name of a person, place, or organisation. Always capitalised in English.",
+    examples: ["London", "Alice", "Google", "Python", "Monday"],
+    sentence: "<mark>Alice</mark> visited <mark>Paris</mark> last <mark>Monday</mark>."
+  },
+  {
+    code: "VB", name: "Verb (Base)", full: "Verb, Base Form",
+    color: "var(--vb)", bg: "var(--vb-bg)",
+    desc: "The uninflected, dictionary form of a verb. Used after modal verbs, in imperatives, and with 'to'.",
+    examples: ["run", "eat", "go", "write", "speak"],
+    sentence: "She asked him to <mark>run</mark> to the store and <mark>buy</mark> milk."
+  },
+  {
+    code: "VBZ", name: "Verb (3rd Sg)", full: "Verb, 3rd Person Singular Present",
+    color: "var(--vb)", bg: "var(--vb-bg)",
+    desc: "Present-tense verb inflected for a third-person singular subject (he, she, it). Usually ends in -s or -es.",
+    examples: ["runs", "eats", "goes", "writes", "speaks"],
+    sentence: "He <mark>runs</mark> every morning and <mark>eats</mark> a healthy breakfast."
+  },
+  {
+    code: "VBD", name: "Verb (Past)", full: "Verb, Past Tense",
+    color: "var(--vb)", bg: "var(--vb-bg)",
+    desc: "Past tense form of a verb, describing an action completed in the past. Regular verbs end in -ed.",
+    examples: ["ran", "ate", "wrote", "spoke", "jumped"],
+    sentence: "They <mark>ran</mark> to school because they <mark>missed</mark> the bus."
+  },
+  {
+    code: "VBG", name: "Verb (Gerund)", full: "Verb, Gerund / Present Participle",
+    color: "var(--vb)", bg: "var(--vb-bg)",
+    desc: "The -ing form of a verb. Functions as a present participle in verb phrases or as a gerund (verbal noun).",
+    examples: ["running", "eating", "writing", "playing", "thinking"],
+    sentence: "<mark>Running</mark> every day is beneficial; she is <mark>thinking</mark> about it."
+  },
+  {
+    code: "VBN", name: "Verb (Past Part.)", full: "Verb, Past Participle",
+    color: "var(--vb)", bg: "var(--vb-bg)",
+    desc: "The past participle form, used in perfect tenses, passive constructions, and as adjectives.",
+    examples: ["run", "eaten", "written", "broken", "seen"],
+    sentence: "The report had been <mark>written</mark> and <mark>reviewed</mark> by the team."
+  },
+  {
+    code: "JJ", name: "Adjective", full: "Adjective",
+    color: "var(--jj)", bg: "var(--jj-bg)",
+    desc: "Adjectives describe or modify nouns and pronouns, providing information about their qualities.",
+    examples: ["big", "happy", "blue", "fast", "ancient"],
+    sentence: "The <mark>old</mark> <mark>brown</mark> fox jumped over the <mark>lazy</mark> dog."
+  },
+  {
+    code: "JJR", name: "Adjective (Comp.)", full: "Adjective, Comparative",
+    color: "var(--jj)", bg: "var(--jj-bg)",
+    desc: "Comparative adjective, used to compare two things. Typically formed by adding -er or using 'more'.",
+    examples: ["bigger", "happier", "faster", "older", "smarter"],
+    sentence: "She is <mark>taller</mark> and <mark>smarter</mark> than her classmates."
+  },
+  {
+    code: "JJS", name: "Adjective (Super.)", full: "Adjective, Superlative",
+    color: "var(--jj)", bg: "var(--jj-bg)",
+    desc: "Superlative adjective, indicating the highest degree among three or more. Uses -est or 'most'.",
+    examples: ["biggest", "happiest", "fastest", "oldest", "best"],
+    sentence: "This is the <mark>tallest</mark> building and the <mark>most</mark> famous landmark."
+  },
+  {
+    code: "RB", name: "Adverb", full: "Adverb",
+    color: "var(--rb)", bg: "var(--rb-bg)",
+    desc: "Adverbs modify verbs, adjectives, or other adverbs. They express manner, place, time, degree, or frequency.",
+    examples: ["quickly", "very", "here", "often", "never"],
+    sentence: "She <mark>quickly</mark> and <mark>carefully</mark> read the <mark>very</mark> long report."
+  },
+  {
+    code: "RBR", name: "Adverb (Comp.)", full: "Adverb, Comparative",
+    color: "var(--rb)", bg: "var(--rb-bg)",
+    desc: "Comparative adverb, used when comparing the manner or degree of two actions or states.",
+    examples: ["faster", "more quickly", "harder", "louder", "earlier"],
+    sentence: "He speaks <mark>louder</mark> and runs <mark>faster</mark> than anyone on the team."
+  },
+  {
+    code: "RBS", name: "Adverb (Super.)", full: "Adverb, Superlative",
+    color: "var(--rb)", bg: "var(--rb-bg)",
+    desc: "Superlative adverb, indicating the highest degree of manner, time, or place among comparisons.",
+    examples: ["fastest", "most quickly", "hardest", "best", "loudest"],
+    sentence: "She performed <mark>best</mark> and arrived <mark>earliest</mark> of all the students."
+  },
+  {
+    code: "PRP", name: "Pronoun", full: "Personal Pronoun",
+    color: "var(--pr)", bg: "var(--pr-bg)",
+    desc: "Personal pronouns stand in for nouns, referring to specific persons or things. Includes subject, object, and reflexive forms.",
+    examples: ["I", "you", "he", "she", "it", "we", "they", "me"],
+    sentence: "<mark>She</mark> told <mark>him</mark> that <mark>they</mark> would meet <mark>us</mark> tomorrow."
+  },
+  {
+    code: "PRP$", name: "Possessive Pron.", full: "Possessive Pronoun",
+    color: "var(--pr)", bg: "var(--pr-bg)",
+    desc: "Possessive pronouns indicate ownership or belonging without needing a separate noun.",
+    examples: ["my", "your", "his", "her", "its", "our", "their"],
+    sentence: "<mark>Her</mark> book and <mark>his</mark> bag were left in <mark>their</mark> classroom."
+  },
+  {
+    code: "DT", name: "Determiner", full: "Determiner",
+    color: "var(--dt)", bg: "var(--dt-bg)",
+    desc: "Determiners introduce noun phrases, specifying definiteness, quantity, or ownership of the noun.",
+    examples: ["the", "a", "an", "this", "that", "these", "those", "every"],
+    sentence: "<mark>The</mark> teacher gave <mark>every</mark> student <mark>a</mark> new book."
+  },
+  {
+    code: "IN", name: "Preposition", full: "Preposition or Subord. Conjunction",
+    color: "var(--in)", bg: "var(--in-bg)",
+    desc: "Prepositions express spatial, temporal, or logical relationships between elements. Also used as subordinating conjunctions.",
+    examples: ["in", "on", "at", "by", "for", "with", "because", "although"],
+    sentence: "She sat <mark>on</mark> the bench <mark>by</mark> the river <mark>at</mark> sunset."
+  },
+  {
+    code: "CC", name: "Conjunction", full: "Coordinating Conjunction",
+    color: "var(--cc)", bg: "var(--cc-bg)",
+    desc: "Coordinating conjunctions join grammatically equal elements: words, phrases, or independent clauses.",
+    examples: ["and", "but", "or", "nor", "for", "so", "yet"],
+    sentence: "He studied hard <mark>but</mark> still failed, <mark>so</mark> he tried again."
+  },
+  {
+    code: "UH", name: "Interjection", full: "Interjection",
+    color: "var(--uh)", bg: "var(--uh-bg)",
+    desc: "Interjections are words or phrases that express emotion or sentiment, often standing alone or at sentence boundaries.",
+    examples: ["oh", "wow", "oops", "hey", "ah", "hurray", "alas"],
+    sentence: "<mark>Wow</mark>, that was amazing! <mark>Oh</mark>, I forgot my phone."
+  },
+  {
+    code: "EX", name: "Existential", full: "Existential 'There'",
+    color: "var(--ex)", bg: "var(--ex-bg)",
+    desc: "The word 'there' when used in existential constructions — sentences asserting the existence of something — not as a location.",
+    examples: ["there (existential)"],
+    sentence: "<mark>There</mark> is a reason for this, and <mark>there</mark> are many solutions."
+  },
+  {
+    code: "TO", name: "To", full: "Infinitive Marker 'to'",
+    color: "var(--to)", bg: "var(--to-bg)",
+    desc: "The word 'to' when used as an infinitive marker before a verb, distinct from its use as a preposition.",
+    examples: ["to (infinitive)"],
+    sentence: "She wants <mark>to</mark> learn and <mark>to</mark> grow every day."
+  },
+  {
+    code: "MD", name: "Modal", full: "Modal Verb",
+    color: "var(--md)", bg: "var(--md-bg)",
+    desc: "Modal verbs express possibility, necessity, permission, or ability. They are auxiliary verbs that modify the main verb.",
+    examples: ["can", "could", "will", "would", "shall", "should", "may", "might", "must"],
+    sentence: "You <mark>should</mark> study hard so you <mark>can</mark> pass the exam."
+  },
+  {
+    code: "WP", name: "Wh-Pronoun", full: "Wh-Pronoun",
+    color: "var(--wh)", bg: "var(--wh-bg)",
+    desc: "Wh-pronouns introduce interrogative and relative clauses, standing in for a noun in a question or relative structure.",
+    examples: ["who", "whom", "what", "which"],
+    sentence: "<mark>Who</mark> wrote this book? Tell me <mark>what</mark> you think about it."
+  },
+  {
+    code: "WRB", name: "Wh-Adverb", full: "Wh-Adverb",
+    color: "var(--wh)", bg: "var(--wh-bg)",
+    desc: "Wh-adverbs begin interrogative or relative clauses and modify verbs, asking about place, time, manner, or reason.",
+    examples: ["where", "when", "why", "how"],
+    sentence: "<mark>When</mark> did she arrive and <mark>why</mark> did she leave so early?"
+  },
+  {
+    code: "CD", name: "Cardinal Number", full: "Cardinal Number",
+    color: "var(--cd)", bg: "var(--cd-bg)",
+    desc: "Cardinal numbers express quantity — how many of something there are. They can be written as digits or words.",
+    examples: ["1", "two", "100", "million", "first", "2024"],
+    sentence: "The class has <mark>30</mark> students and meets <mark>three</mark> times a week."
+  },
+  {
+    code: "RP", name: "Particle", full: "Particle",
+    color: "var(--rp)", bg: "var(--rp-bg)",
+    desc: "Particles are function words closely associated with verbs to form phrasal verbs, altering the verb's meaning.",
+    examples: ["up", "out", "off", "down", "in", "back", "away"],
+    sentence: "Please turn <mark>off</mark> the lights and put <mark>away</mark> your belongings."
+  },
+];
+
+/* ─────────────────────────────────────────────
+   SENTENCE DEMO
+───────────────────────────────────────────── */
+const DEMO_SENTENCE = [
+  { word: "She",       code: "PRP" },
+  { word: "quickly",   code: "RB"  },
+  { word: "wrote",     code: "VBD" },
+  { word: "a",         code: "DT"  },
+  { word: "beautiful", code: "JJ"  },
+  { word: "report",    code: "NN"  },
+  { word: "and",       code: "CC"  },
+  { word: "should",    code: "MD"  },
+  { word: "publish",   code: "VB"  },
+  { word: "it",        code: "PRP" },
+  { word: "tomorrow",  code: "RB"  },
+];
+
+function getTagColor(code) {
+  const t = TAGS.find(t => t.code === code);
+  return t ? { color: t.color, bg: t.bg } : { color: "var(--muted)", bg: "rgba(100,116,139,.08)" };
+}
+
+const sentenceBox = document.getElementById("sentenceBox");
+DEMO_SENTENCE.forEach(item => {
+  const { color, bg } = getTagColor(item.code);
+  const chip = document.createElement("div");
+  chip.className = "word-chip";
+  chip.innerHTML = `
+    <span class="word-text">${item.word}</span>
+    <span class="word-tag" style="color:${color};background:${bg}">${item.code}</span>
+  `;
+  sentenceBox.appendChild(chip);
+});
+
+/* ─────────────────────────────────────────────
+   POS CARDS
+───────────────────────────────────────────── */
+const posGrid = document.getElementById("posGrid");
+TAGS.forEach((tag, i) => {
+  const card = document.createElement("div");
+  card.className = "pos-card";
+  card.style.animationDelay = `${(i % 3) * 0.08}s`;
+  card.style.borderColor = tag.bg.replace(".08)", ".25)");
+
+  const exChips = tag.examples
+    .map(e => `<span class="ex-chip" style="color:${tag.color};background:${tag.bg}">${e}</span>`)
+    .join("");
+
+  card.innerHTML = `
+    <div class="card-head">
+      <span class="tag-badge" style="color:${tag.color};background:${tag.bg}">${tag.code}</span>
+      <div>
+        <div class="tag-name">${tag.name}</div>
+        <div class="tag-full">${tag.full}</div>
+      </div>
+    </div>
+    <p class="tag-desc">${tag.desc}</p>
+    <div class="examples-label">Examples</div>
+    <div class="examples-row">${exChips}</div>
+    <div class="examples-label">In a Sentence</div>
+    <p class="sentence-example" style="border-color:${tag.color};color:var(--muted)">
+      <mark style="color:${tag.color};background:transparent">${tag.code}</mark> → ${tag.sentence}
+    </p>
+  `;
+  posGrid.appendChild(card);
+});
+
+/* ─────────────────────────────────────────────
+   SCROLL-TRIGGERED CARD ANIMATION
+───────────────────────────────────────────── */
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add("visible"); io.unobserve(e.target); }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll(".pos-card").forEach(c => io.observe(c));
+
+/* ─────────────────────────────────────────────
+   FLOATING BACKGROUND TAGS
+───────────────────────────────────────────── */
+const ftContainer = document.getElementById("floatingTags");
+const ftTags = ["NN","VB","JJ","RB","PRP","DT","IN","CC","MD","NNP","VBD","VBG","WP","CD","UH"];
+ftTags.forEach((tag, i) => {
+  const span = document.createElement("span");
+  span.className = "ft";
+  const t = TAGS.find(t => t.code === tag);
+  if (t) {
+    span.style.color = t.color;
+    span.style.background = t.bg;
+    span.style.border = `1px solid ${t.bg.replace(".08)", ".3)")}`;
+  }
+  span.textContent = tag;
+  span.style.left = `${(i / ftTags.length * 100) + Math.random() * 5}%`;
+  span.style.animationDelay = `${i * 0.9}s`;
+  span.style.animationDuration = `${12 + i * 0.7}s`;
+  ftContainer.appendChild(span);
+});
+</script>
+</body>
+</html>
